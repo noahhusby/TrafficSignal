@@ -1,115 +1,86 @@
+/**
+ * A simple controller for a traffic signal
+ * @author Noah Husby
+ */
+
 #define RED 2
 #define YELLOW 3
 #define GREEN 4
-#define MODE 10
-#define DB 13
+#define BUTTON 10
+#define INTERVAL 1000
 
 static unsigned long lastTime = 0;
-const long interval = 1000;
+boolean button_pressed = false;
 int state = 0;
 
-const long si = 1000;
-const long yi = 2500;
-  
-boolean mode_pressed = false;
+enum trafficMode {
+	OFF,
+	RED_ON,
+	YELLOW_ON,
+	GREEN_ON,
+	RED_FLASH,
+	YELLOW_FLASH,
+	CYCLE
+};
 
-int cm = 0;
+trafficMode mode = OFF;
 
 void setup() {
-  pinMode(RED, OUTPUT);
-  pinMode(YELLOW, OUTPUT);
-  pinMode(GREEN, OUTPUT);
-  pinMode(MODE, INPUT);
-
-  pinMode(DB,OUTPUT);
-  digitalWrite(DB, LOW);
-
-  Serial.begin(9600);
+	pinMode(RED, OUTPUT);
+	pinMode(YELLOW, OUTPUT);
+	pinMode(GREEN, OUTPUT);
+	pinMode(BUTTON, INPUT);
 }
 
 void loop() {
+	unsigned long now = millis();
+	if(digitalRead(BUTTON) == HIGH) {
+		if(!button_pressed) {
+			button_pressed = true;
+			if(mode < 6) {
+				mode = mode + 1;
+			} else {
+				mode = 0;
+			}
+			state = 0;
+		}	
+	} else {
+		button_pressed = true;
+	}
   
-  unsigned long now = millis();
-
-  Serial.println(cm);
-  
-  if(digitalRead(MODE) == HIGH && !mode_pressed) {
-    mode_pressed = true;
-    if(cm == 0) {
-      cm = 1;
-    } else if(cm == 1) {
-      cm = 2;
-    } else if(cm == 2) {
-      cm = 3;
-    } else if(cm == 3) {
-      cm = 4;
-    } else if(cm == 4) {
-      cm = 5;
-    } else if(cm == 5) {
-      cm = 6;
-    } else if(cm == 6) {
-      cm = 0;
-    }
-
-    state = 0;
-  }
-  
-  if(digitalRead(MODE) == LOW) {
-    mode_pressed = false;
-  }
-
-  if(cm == 0) {
-      digitalWrite(RED, LOW);
-      digitalWrite(YELLOW, LOW);
-      digitalWrite(GREEN, LOW);
-    }
-    if(cm == 1) {
-      digitalWrite(RED, HIGH);
-      digitalWrite(YELLOW, LOW);
-      digitalWrite(GREEN, LOW);
-    }
-    if(cm == 2) {
-      digitalWrite(RED, LOW);
-      digitalWrite(YELLOW, HIGH);
-      digitalWrite(GREEN, LOW);
-    }
-    if(cm == 3) {
-      digitalWrite(RED, LOW);
-      digitalWrite(YELLOW, LOW);
-      digitalWrite(GREEN, HIGH);
-    }
-    if(cm == 4) {
-      digitalWrite(YELLOW, LOW);
-      digitalWrite(GREEN, LOW);
-      if ( now - lastTime > interval && state == 0) {
-        state = 1;
-        lastTime = now;
-       digitalWrite(RED, HIGH);
-      }
-
-      if ( now - lastTime > interval && state == 1) {
-        state = 0;
-        lastTime = now;
-        digitalWrite(RED, LOW);
-      }
-    }
-    if(cm == 5) {
+	if(mode == OFF) {
+		digitalWrite(RED, LOW);
+		digitalWrite(YELLOW, LOW);
+		digitalWrite(GREEN, LOW);
+	} else if(mode == RED_ON) {
+		digitalWrite(RED, HIGH);
+		digitalWrite(YELLOW, LOW);
+		digitalWrite(GREEN, LOW);
+	} else if(mode == YELLOW_ON) {
+		digitalWrite(RED, LOW);
+		digitalWrite(YELLOW, HIGH);
+		digitalWrite(GREEN, LOW);
+	} else if(mode == GREEN_ON) {
+		digitalWrite(RED, LOW);
+		digitalWrite(YELLOW, LOW);
+		digitalWrite(GREEN, HIGH);
+	} else if(mode == RED_FLASH) {
+		digitalWrite(YELLOW, LOW);
+		digitalWrite(GREEN, LOW);
+		if ( now - lastTime > INTERVAL) {
+			state = state == 0 ? 1 : 0;
+			lastTime = now;
+			digitalWrite(RED, state);
+		}
+    } else if(mode == YELLOW_FLASH) {
       digitalWrite(RED, LOW);
       digitalWrite(GREEN, LOW);
-      if ( now - lastTime > interval && state == 0) {
-        state = 1;
-        lastTime = now;
-       digitalWrite(YELLOW, HIGH);
-      }
-
-      if ( now - lastTime > interval && state == 1) {
-        state = 0;
-        lastTime = now;
-        digitalWrite(YELLOW, LOW);
-      }
-    }
-    
-    if(cm == 6) {
+      if ( now - lastTime > INTERVAL) {
+			state = state == 0 ? 1 : 0;
+			lastTime = now;
+			digitalWrite(YELLOW, state);
+		}
+    } else if(mode == CYCLE) {
       if ( now - lastTime > 15000 && state == 0) {
         state = 1;
         lastTime = now;
@@ -133,10 +104,5 @@ void loop() {
         digitalWrite(YELLOW, LOW);
         digitalWrite(GREEN, LOW);
       }
-
     }
-  
 }
-
-
-
